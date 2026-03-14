@@ -1,11 +1,27 @@
 import argparse
+import hashlib
 import os
 from pathlib import Path
-from time import time
-import sched
 from typing import Optional
 import json
+
 import destinationAPI
+
+def get_file_hash(filepath: Path)-> str:
+    hash_md5 = hashlib.md5()
+    with open(filepath, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            hash_md5.update(chunk)
+    return hash_md5.hexdigest()
+
+def list_hashed_files(filepath: Path) -> dict:
+    file_hashes = {}
+    for root, _, files in os.walk(filepath):
+        for file in files:
+            full_path = os.path.join(root, file)
+            relative = os.path.relpath(full_path, filepath)
+            file_hashes[relative] = get_file_hash(full_path)
+    return file_hashes
 
 def json_loader(filepath: Path) -> dict:
     with open(filepath, 'r') as file_descriptor:
@@ -13,24 +29,39 @@ def json_loader(filepath: Path) -> dict:
     return data
 
 def sync_folder(source_filepath: Path, dest_filepath: Path) -> None:
-    src_hashes = destinationAPI.list_hashed_files(source_filepath)
-    dest_hashes = destinationAPI.list_hashed_files(dest_filepath)
-    to_be_copied, to_be_deleted = compare_directories(src_hashes, dest_hashes)
+    destAPI = destinationAPI.destinationAPI(dest_filepath)
+    src_hashes = list_hashed_files(source_filepath)
+    dest_hashes = destAPI.list_hashed_files()
+    to_be_created, to_be_updated, to_be_deleted = compare_directories(src_hashes, dest_hashes)
+    for file in to_be_created:
+        content = Path(os.path.join(source_filepath, file)).read_text()
+        destAPI.create_file(file, content)
+    for file in to_be_updated:
+        content = Path(os.path.join(source_filepath, file)).read_text()
+        destAPI.update_file(file, content)
+    for file in to_be_deleted:
+        destAPI.delete_file(file)
     
 
 def compare_directories(src_hashes: dict, dest_hashes: dict)-> tuple[list[str], list[str]]:
-    to_be_copied = []
+    to_be_created = []
+    to_be_updated = []
     to_be_deleted = []
 
     for file, hash_val in src_hashes.items():
-        if file not in dest_hashes or dest_hashes[file] != hash_val:
-            to_be_copied.append(file)
+        if file not in dest_hashes:
+            to_be_created.append(file)
+        
+        elif dest_hashes[file] != hash_val:
+            to_be_updated.append(file)
+        else:
+            pass
 
     for file in dest_hashes:
         if file not in src_hashes:
             to_be_deleted.append(file)
 
-    return to_be_copied, to_be_deleted
+    return to_be_created, to_be_updated, to_be_deleted
 
 def makePath(path: str | Path) -> Optional[Path]:
     try: 
@@ -51,22 +82,18 @@ def main(source_path: str | Path) -> None:
         raise TypeError(f"Error: {source_filepath} is not a directory")
         return
     else:
-        try:
             #load destination url from config file, security implications?
             #check compatibility rel and abs url and unix vs windows
-            config = json_loader(makePath("config.json")) #refactor to make a command line argument
-            if not config:
-                raise ValueError("Error: Invalid config.json")
-                return
-            destination_url = config.get("destinationUrl")
-            if not destination_url:
-                raise ValueError("Error: destinationUrl not found in config.json")
-                return
-            destination_filepath = makePath(destination_url)
-
-        except FileNotFoundError:
-            raise FileNotFoundError("Error: config.json not found")
+        config = json_loader(makePath("config.json")) #refactor to make a command line argument
+        if not config:
+            raise ValueError("Error: Invalid config.json")
             return
+        destination_url = config.get("destinationUrl")
+        if not destination_url:
+            raise ValueError("Error: destinationUrl not found in config.json")
+            return
+        destination_filepath = makePath(destination_url)
+
         sync_folder(source_filepath, destination_filepath) #refactor to run at recurring intervals or on detected change
 
 

@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional
 import shutil
 
-#to avoid circular import functions moved here, may need to refactor to seperate lib file
+#to avoid circular import functions copied here, may need to refactor to seperate lib file
 def get_file_hash(filepath: Path)-> str:
     hash_md5 = hashlib.md5()
     with open(filepath, "rb") as f:
@@ -25,7 +25,6 @@ class destinationAPI: #change name to be more descriptive
     
     def __init__(self, base_dir: str | Path) -> None:
         self.base_dir = Path(base_dir)
-        self.base_dir.mkdir(parents=True, exist_ok=True)
     
     def file_path(self, filename: str) -> Path:
         return Path(self.base_dir, filename)
@@ -53,6 +52,6 @@ class destinationAPI: #change name to be more descriptive
     def get_file_hash(self,path)->str:
         return get_file_hash(self.file_path(path))
 
-    def list_hashed_files(self, directory) ->dict:
-        return list_hashed_files(self.file_path(directory))
+    def list_hashed_files(self) ->dict:
+        return list_hashed_files(self.base_dir)
 

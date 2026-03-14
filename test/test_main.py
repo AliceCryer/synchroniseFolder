@@ -5,29 +5,25 @@ from pathlib import Path
 import json
 import builtins
 import main
-import json
 
 @pytest.fixture
-def test_path():
+def test_path()->Path:
     return Path(os.path.dirname(__file__))
 
 @pytest.fixture
-def src_dir(test_path):
+def src_dir(test_path: Path):
     src = Path.joinpath(test_path, "src")
     src.mkdir(exist_ok=True)
     yield src
     os.rmdir(src)
 
 @pytest.fixture
-def dest_dir(test_path):
-    dest = Path.joinpath(test_path, "dest")
-    dest.mkdir(exist_ok=True)
-    yield dest
-    os.rmdir(dest)
+def dest_url()->str:
+    return "http://fake_url.fake/"
 
 @pytest.fixture
-def test_config_file(test_path: Path)-> dict:
-    config = {"destinationUrl": Path.joinpath(test_path, "dest")}
+def test_config_file(dest_url: str)-> dict:
+    config = {"destinationUrl": dest_url}
     return config
 
 def test_json_loader(test_path: Path)-> None:
@@ -76,14 +72,13 @@ def test_main_no_destination_url(src_dir: Path)-> None:
     with pytest.raises(ValueError):
         main.main(str(src_dir))
 
-def test_main_success(src_dir: Path, dest_dir: Path, test_config_file: dict)-> None:
+def test_main_success(src_dir: Path, dest_url: str, test_config_file: dict)-> None:
     config_path = test_config_file
     Path(os.path.join(src_dir , "file.txt")).write_text("data")
 
-    # Patch makePath to handle config and destination
     setattr(main, "makePath", lambda path_under_test: Path(path_under_test))
-    setattr(main, "json_loader", lambda path_under_test: {"destinationUrl": str(dest_dir)})
+    setattr(main, "json_loader", lambda json: {"destinationUrl": dest_url})
     setattr(main, "sync_folder", lambda s, d: None)
 
     main.main(str(src_dir))
-    os.remove(src_dir / "file.txt")
+    os.remove(os.path.join(src_dir, "file.txt"))

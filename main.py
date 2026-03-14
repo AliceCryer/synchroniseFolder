@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 from typing import Optional
 import json
+from urllib.parse import urlparse
 
 import destinationAPI
 
@@ -28,8 +29,8 @@ def json_loader(filepath: Path) -> dict:
         data = json.load(file_descriptor)
     return data
 
-def sync_folder(source_filepath: Path, dest_filepath: Path) -> None:
-    destAPI = destinationAPI.destinationAPI(dest_filepath)
+def sync_folder(source_filepath: Path, destination_url: str) -> None:
+    destAPI = destinationAPI.destinationAPI(destination_url)
     src_hashes = list_hashed_files(source_filepath)
     dest_hashes = destAPI.list_hashed_files()
     to_be_created, to_be_updated, to_be_deleted = compare_directories(src_hashes, dest_hashes)
@@ -63,6 +64,9 @@ def compare_directories(src_hashes: dict, dest_hashes: dict)-> tuple[list[str], 
 
     return to_be_created, to_be_updated, to_be_deleted
 
+def makeURL(url: str) -> str:
+    return urlparse(url)
+
 def makePath(path: str | Path) -> Optional[Path]:
     try: 
         path = Path(os.path.abspath(path)) #uses cwd, need refactor
@@ -92,9 +96,11 @@ def main(source_path: str | Path) -> None:
         if not destination_url:
             raise ValueError("Error: destinationUrl not found in config.json")
             return
-        destination_filepath = makePath(destination_url)
-
-        sync_folder(source_filepath, destination_filepath) #refactor to run at recurring intervals or on detected change
+        destination_url = makeURL(destination_url)
+        if not destination_url.scheme or not destination_url.netloc:
+            raise ValueError(f"Error: Invalid destinationUrl {destination_url}")
+            return
+        sync_folder(source_filepath, destination_url) #refactor to run at recurring intervals or on detected change
 
 
 if __name__ == "__main__":

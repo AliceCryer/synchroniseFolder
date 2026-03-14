@@ -22,8 +22,8 @@ def list_hashed_files(file_url: str) -> dict:
     resp.raise_for_status()
     files = resp.json() 
     for file in files:
-        file_url = f"{file_url.rstrip('/')}/{file}"
-        file_hashes[file] = get_file_hash(file_url)
+        full_path = f"{file_url.rstrip('/')}/{file}"
+        file_hashes[file] = get_file_hash(full_path)
     return file_hashes
 
 class destinationAPI: #change name to be more descriptive

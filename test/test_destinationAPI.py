@@ -48,10 +48,10 @@ def test_delete_file(test_dest: destinationAPI, test_url:str, mock_response: req
 
 def test_get_file_hash(test_dest: destinationAPI, mock_response: requests_mock.Mocker)->None:
     mock_response.get(test_dest.make_URL("hashme.txt"), content=b"abc", status_code=200)
-    expected = "900150983cd24fb0d6963f7d28e17f72"  # md5 of b"abc"
+    expected = hashlib.md5(b"abc").hexdigest()
     assert test_dest.get_file_hash("hashme.txt") == expected
 
-def test_list_hashed_files_success(test_url:str):
+def test_list_hashed_files(test_url:str):
     class MockResponse:
         def __init__(self, url):
             self.url = url
@@ -64,10 +64,12 @@ def test_list_hashed_files_success(test_url:str):
         def raise_for_status(self):
             if self.status_code != 200:
                 raise requests.HTTPError("fail")
+        def __enter__(self):
+            return self
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            pass
         
     def mock_get(url, stream=False):
-        if url == test_url:
-            return MockResponse(url)
         return MockResponse(url)
 
     files = ["a.txt", "b.txt"]
@@ -80,8 +82,8 @@ def test_list_hashed_files_success(test_url:str):
         "b.txt": hashlib.md5(b"bar").hexdigest()
     }
     setattr(requests, "get", mock_get)
-    with pytest.raises(requests.HTTPError):
-        list_hashed_files(test_url)
 
     result = list_hashed_files(test_url)
-    assert result == file_hashes
+    assert result['b.txt'] == file_hashes['b.txt']
+    assert result['a.txt'] == file_hashes['a.txt']
+

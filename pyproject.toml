@@ -1,0 +1,18 @@
+[project]
+name = "synchroniseFolder"
+version = "0.1.0"
+description = "A project to synchronise folders"
+readme = "README.md"
+requires-python = ">=3.8"
+
+[tool.setuptools]
+packages = ["synchroniseFolder"]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q"
+testpaths = ["test"]
+
+[tool.black]
+line-length = 88
+target-version = ['py38']

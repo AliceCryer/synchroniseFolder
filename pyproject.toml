@@ -6,7 +6,8 @@ readme = "README.md"
 requires-python = ">=3.8"
 
 [tool.setuptools]
-packages = ["synchroniseFolder"]
+package-dir = {"" = "src"}
+py-modules = ["destinationAPI", "main"]
 
 [tool.pytest.ini_options]
 minversion = "6.0"

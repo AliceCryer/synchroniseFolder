@@ -23,7 +23,10 @@ def list_hashed_files(file_url: str) -> dict:
     file_hashes = {}
     resp = requests.get(file_url)
     resp.raise_for_status()
-    files = resp.json() 
+    try:
+        files = resp.json()
+    except requests.JSONDecodeError:
+        return file_hashes
     for file in files:
         full_path = f"{file_url.rstrip('/')}/{file}"
         file_hashes[file] = get_file_hash(full_path)

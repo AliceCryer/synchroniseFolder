@@ -96,10 +96,7 @@ def main(source_path: str | Path) -> None:
         if not destination_url:
             raise ValueError("Error: destinationUrl not found in config.json")
             return
-        destination_url = makeURL(destination_url)
-        if not destination_url.scheme or not destination_url.netloc:
-            raise ValueError(f"Error: Invalid destinationUrl {destination_url}")
-            return
+        
         sync_folder(source_filepath, destination_url) #refactor to run at recurring intervals or on detected change
 
 

@@ -5,6 +5,10 @@ from typing import Optional
 import shutil
 import requests
 import urllib.request as urllib2
+from flask import Flask
+
+app = Flask(__name__)
+
 
 # may need to refactor to seperate lib file with the path based version
 def get_file_hash(url: str) -> str:
@@ -14,7 +18,6 @@ def get_file_hash(url: str) -> str:
         for chunk in resp.iter_content(4096):
             hasher.update(chunk)
         return hasher.hexdigest()
-
 
 def list_hashed_files(file_url: str) -> dict:
     file_hashes = {}
@@ -33,21 +36,24 @@ class destinationAPI: #change name to be more descriptive
     def make_URL(self, filename: str) -> str:
         return f"{self.base_url}/{filename}"
     
+    @app.route("/", methods=["POST"])
     def create_file(self, filename: str, content: str = "") -> None:
         requests.post(self.base_url, json={"path": filename, "content": content}).raise_for_status()
     
+    @app.route("/<path:filename>", methods=["PUT"])
     def update_file(self, filename: str, content: str) -> None:
         self.delete_file(filename)
         self.create_file(filename, content)
 
-    
+    @app.route("/<path:filename>", methods=["DELETE"])
     def delete_file(self, filename: str) -> None:
         requests.delete(self.make_URL(filename)).raise_for_status()
 
-    
-    def get_file_hash(self,url)->str:
-        return get_file_hash(self.make_URL(url))
+    @app.route("/<path:filename>", methods=["GET"])
+    def get_file_hash(self, filename: str) -> str:
+        return get_file_hash(self.make_URL(filename))
 
+    @app.route("/", methods=["GET"])
     def list_hashed_files(self) ->dict:
         return list_hashed_files(self.base_url)
 

@@ -26,7 +26,7 @@ def mock_response():
 
 def test_create_file(test_dest: destinationAPI, test_url: str)->None:
     with requests_mock.Mocker() as mock_request:
-        mock_request.post(f"{test_url}", status_code=200)
+        mock_request.put(f"{test_url}", status_code=200)
         test_dest.create_file("test.txt", "hello")
         assert mock_request.called
         assert mock_request.request_history[0].json() == {"path": "test.txt", "content": "hello"}

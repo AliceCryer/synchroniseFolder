@@ -1,13 +1,8 @@
 import hashlib
-import os
-from pathlib import Path
 from typing import Optional
-import shutil
 import requests
 import urllib.request as urllib2
-from flask import Flask
-
-app = Flask(__name__)
+from urllib.parse import unquote
 
 
 # may need to refactor to seperate lib file with the path based version
@@ -32,31 +27,34 @@ def list_hashed_files(file_url: str) -> dict:
         file_hashes[file] = get_file_hash(full_path)
     return file_hashes
 
-class destinationAPI: #change name to be more descriptive
+class destinationAPI(): #change name to be more descriptive
     def __init__(self, base_url: str ) -> None:
         self.base_url = base_url.rstrip('/')
     
     def make_URL(self, filename: str) -> str:
-        return f"{self.base_url}/{filename}"
+        decoded_filename = unquote(filename)
+        normalized_filename = decoded_filename.replace("\\", "/")
+        return f"{self.base_url}/{normalized_filename}"
     
-    @app.route("/", methods=["POST"])
     def create_file(self, filename: str, content: str = "") -> None:
-        requests.post(self.base_url, json={"path": filename, "content": content}).raise_for_status()
+        if not filename:
+            return
+        requests.put(self.make_URL(filename), json={"path": filename, "content": content}).raise_for_status()
     
-    @app.route("/<path:filename>", methods=["PUT"])
     def update_file(self, filename: str, content: str) -> None:
+        if not filename:
+            return
         self.delete_file(filename)
         self.create_file(filename, content)
 
-    @app.route("/<path:filename>", methods=["DELETE"])
     def delete_file(self, filename: str) -> None:
+        if not filename:
+            return
         requests.delete(self.make_URL(filename)).raise_for_status()
 
-    @app.route("/<path:filename>", methods=["GET"])
     def get_file_hash(self, filename: str) -> str:
         return get_file_hash(self.make_URL(filename))
 
-    @app.route("/", methods=["GET"])
     def list_hashed_files(self) ->dict:
         return list_hashed_files(self.base_url)
 
